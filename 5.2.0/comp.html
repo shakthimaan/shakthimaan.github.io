@@ -5,101 +5,105 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <link rel="stylesheet" type="text/css" href="manual.css">
-<title>OCaml - Native-code compilation (ocamlopt)</title>
+<title>OCaml - Batch compilation (ocamlc)</title>
 <script src="scroll.js"></script><script src="navigation.js"></script><link rel="shortcut icon" type="image/x-icon" href="favicon.ico"></head>
-<body><div class="content manual"><div id="sidebar-button"><span>☰</span></div><nav id="part-title"><span>☰</span>The OCaml tools</nav><ul id="part-menu"><li><a href="comp.html">Batch compilation (ocamlc)</a></li><li><a href="toplevel.html">The toplevel system or REPL (ocaml)</a></li><li><a href="runtime.html">The runtime system (ocamlrun)</a></li><li class="active"><a href="native.html">Native-code compilation (ocamlopt)</a></li><li><a href="lexyacc.html">Lexer and parser generators (ocamllex, ocamlyacc)</a></li><li><a href="depend.html">Dependency generator (ocamldep)</a></li><li><a href="ocamldoc.html">The documentation generator (ocamldoc)</a></li><li><a href="debugger.html">The debugger (ocamldebug)</a></li><li><a href="profil.html">Profiling (ocamlprof)</a></li><li><a href="intfc.html">Interfacing C with OCaml</a></li><li><a href="flambda.html">Optimisation with Flambda</a></li><li><a href="afl-fuzz.html">Fuzzing with afl-fuzz</a></li><li><a href="runtime-tracing.html">Runtime tracing with runtime events</a></li><li><a href="tail_mod_cons.html">The “Tail Modulo Constructor” program transformation</a></li><li><a href="tsan.html">Runtime detection of data races with ThreadSanitizer</a></li></ul>
+<body><div class="content manual"><div id="sidebar-button"><span>☰</span></div><nav id="part-title"><span>☰</span>The OCaml tools</nav><ul id="part-menu"><li class="active"><a href="comp.html">Batch compilation (ocamlc)</a></li><li><a href="toplevel.html">The toplevel system or REPL (ocaml)</a></li><li><a href="runtime.html">The runtime system (ocamlrun)</a></li><li><a href="native.html">Native-code compilation (ocamlopt)</a></li><li><a href="lexyacc.html">Lexer and parser generators (ocamllex, ocamlyacc)</a></li><li><a href="depend.html">Dependency generator (ocamldep)</a></li><li><a href="ocamldoc.html">The documentation generator (ocamldoc)</a></li><li><a href="debugger.html">The debugger (ocamldebug)</a></li><li><a href="profil.html">Profiling (ocamlprof)</a></li><li><a href="intfc.html">Interfacing C with OCaml</a></li><li><a href="flambda.html">Optimisation with Flambda</a></li><li><a href="afl-fuzz.html">Fuzzing with afl-fuzz</a></li><li><a href="runtime-tracing.html">Runtime tracing with runtime events</a></li><li><a href="tail_mod_cons.html">The “Tail Modulo Constructor” program transformation</a></li><li><a href="tsan.html">Runtime detection of data races with ThreadSanitizer</a></li></ul>
 
 
 
 
-<h1 class="chapter" id="sec364"><span class="chapter-number">Chapter 16</span> Native-code compilation (ocamlopt)</h1>
-<header id="sidebar"><nav class="toc brand"><a class="brand" href="https://ocaml.org/"><img src="colour-logo.svg" class="svg" alt="OCaml"></a></nav><nav class="toc"><div class="toc_version"><a id="version-select" href="https://ocaml.org/releases/">Version 5.3</a></div><div class="toc_title"><a href="index.html">&lt; The OCaml Manual</a></div><ul><li class="top"><a href="#">Native-code compilation (ocamlopt)</a></li>
-<li><a href="native.html#s%3Anative-overview"><span class="number">1</span> Overview of the compiler</a>
-</li><li><a href="native.html#s%3Anative-options"><span class="number">2</span> Options</a>
-</li><li><a href="native.html#s%3Anative-common-errors"><span class="number">3</span> Common errors</a>
-</li><li><a href="native.html#s%3Anative%3Arunning-executable"><span class="number">4</span> Running executables produced by ocamlopt</a>
-</li><li><a href="native.html#s%3Acompat-native-bytecode"><span class="number">5</span> Compatibility with the bytecode compiler</a>
+<h1 class="chapter" id="sec340"><span class="chapter-number">Chapter 13</span> Batch compilation (ocamlc)</h1>
+<header id="sidebar"><nav class="toc brand"><a class="brand" href="https://ocaml.org/"><img src="colour-logo.svg" class="svg" alt="OCaml"></a></nav><nav class="toc"><div class="toc_version"><a id="version-select" href="https://ocaml.org/releases/">Version 5.3</a></div><div class="toc_title"><a href="index.html">&lt; The OCaml Manual</a></div><ul><li class="top"><a href="#">Batch compilation (ocamlc)</a></li>
+<li><a href="comp.html#s%3Acomp-overview"><span class="number">1</span> Overview of the compiler</a>
+</li><li><a href="comp.html#s%3Acomp-options"><span class="number">2</span> Options</a>
+</li><li><a href="comp.html#s%3Amodules-file-system"><span class="number">3</span> Modules and the file system</a>
+</li><li><a href="comp.html#s%3Acomp-errors"><span class="number">4</span> Common errors</a>
+</li><li><a href="comp.html#s%3Acomp-warnings"><span class="number">5</span> Warning reference</a>
 </li></ul></nav></header>
-<p> <a id="c:nativecomp"></a>
-</p><p>This chapter describes the OCaml high-performance
-native-code compiler <span class="machine"><span class="font-tt">ocamlopt</span></span>, which compiles OCaml source files to
-native code object files and links these object files to produce
-standalone executables.</p><p>The native-code compiler is only available on certain platforms.
-It produces code that runs faster than the bytecode produced by
-<span class="machine"><span class="font-tt">ocamlc</span></span>, at the cost of increased compilation time and executable code
-size. Compatibility with the bytecode compiler is extremely high: the
-same source code should run identically when compiled with <span class="machine"><span class="font-tt">ocamlc</span></span> and
-<span class="machine"><span class="font-tt">ocamlopt</span></span>.</p><p>It is not possible to mix native-code object files produced by <span class="machine"><span class="font-tt">ocamlopt</span></span>
-with bytecode object files produced by <span class="machine"><span class="font-tt">ocamlc</span></span>: a program must be
-compiled entirely with <span class="machine"><span class="font-tt">ocamlopt</span></span> or entirely with <span class="machine"><span class="font-tt">ocamlc</span></span>. Native-code
-object files produced by <span class="machine"><span class="font-tt">ocamlopt</span></span> cannot be loaded in the toplevel
-system <span class="machine"><span class="font-tt">ocaml</span></span>.</p>
-<h2 class="section" id="s:native-overview"><a class="section-anchor" href="#s:native-overview" aria-hidden="true"></a><span class="number">1</span> Overview of the compiler</h2>
-<p>The <span class="machine"><span class="font-tt">ocamlopt</span></span> command has a command-line interface very close to that
-of <span class="machine"><span class="font-tt">ocamlc</span></span>. It accepts the same types of arguments, and processes them
+<p> <a id="c:camlc"></a>
+</p><p>This chapter describes the OCaml batch compiler <span class="machine"><span class="font-tt">ocamlc</span></span>,
+which compiles OCaml source files to bytecode object files and links
+these object files to produce standalone bytecode executable files.
+These executable files are then run by the bytecode interpreter
+<span class="machine"><span class="font-tt">ocamlrun</span></span>.</p>
+<h2 class="section" id="s:comp-overview"><a class="section-anchor" href="#s:comp-overview" aria-hidden="true"></a><span class="number">1</span> Overview of the compiler</h2>
+<p>The <span class="machine"><span class="font-tt">ocamlc</span></span> command has a command-line interface similar to the one of
+most C compilers. It accepts several types of arguments and processes them
 sequentially, after all options have been processed:</p><ul class="itemize"><li class="li-itemize">
 Arguments ending in <span class="machine"><span class="font-tt">.mli</span></span> are taken to be source files for
 compilation unit interfaces. Interfaces specify the names exported by
 compilation units: they declare value names with their types, define
 public data types, declare abstract data types, and so on. From the
-file <span class="font-it">x</span><span class="machine"><span class="font-tt">.mli</span></span>, the <span class="machine"><span class="font-tt">ocamlopt</span></span> compiler produces a compiled interface
-in the file <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmi</span></span>. The interface produced is identical to that
-produced by the bytecode compiler <span class="machine"><span class="font-tt">ocamlc</span></span>.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.ml</span></span> are taken to be source files for compilation
+file <span class="font-it">x</span><span class="machine"><span class="font-tt">.mli</span></span>, the <span class="machine"><span class="font-tt">ocamlc</span></span> compiler produces a compiled interface
+in the file <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmi</span></span>.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.ml</span></span> are taken to be source files for compilation
 unit implementations. Implementations provide definitions for the
 names exported by the unit, and also contain expressions to be
-evaluated for their side-effects. From the file <span class="font-it">x</span><span class="machine"><span class="font-tt">.ml</span></span>, the <span class="machine"><span class="font-tt">ocamlopt</span></span>
-compiler produces two files: <span class="font-it">x</span><span class="machine"><span class="font-tt">.o</span></span>, containing native object code,
-and <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmx</span></span>, containing extra information for linking and
-optimization of the clients of the unit. The compiled implementation
-should always be referred to under the name <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmx</span></span> (when given
-a <span class="machine"><span class="font-tt">.o</span></span> or <span class="machine"><span class="font-tt">.obj</span></span> file, <span class="machine"><span class="font-tt">ocamlopt</span></span> assumes that it contains code compiled from C,
-not from OCaml).<p>The implementation is checked against the interface file <span class="font-it">x</span><span class="machine"><span class="font-tt">.mli</span></span>
-(if it exists) as described in the manual for <span class="machine"><span class="font-tt">ocamlc</span></span>
-(chapter ‍<a href="comp.html#c%3Acamlc">13</a>).</p></li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.cmx</span></span> are taken to be compiled object code. These
+evaluated for their side-effects. From the file <span class="font-it">x</span><span class="machine"><span class="font-tt">.ml</span></span>, the <span class="machine"><span class="font-tt">ocamlc</span></span>
+compiler produces compiled object bytecode in the file <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmo</span></span>.<p>If the interface file <span class="font-it">x</span><span class="machine"><span class="font-tt">.mli</span></span> exists, the implementation
+<span class="font-it">x</span><span class="machine"><span class="font-tt">.ml</span></span> is checked against the corresponding compiled interface
+<span class="font-it">x</span><span class="machine"><span class="font-tt">.cmi</span></span>, which is assumed to exist. If no interface
+<span class="font-it">x</span><span class="machine"><span class="font-tt">.mli</span></span> is provided, the compilation of <span class="font-it">x</span><span class="machine"><span class="font-tt">.ml</span></span> produces a
+compiled interface file <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmi</span></span> in addition to the compiled
+object code file <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmo</span></span>. The file <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmi</span></span> produced
+corresponds to an interface that exports everything that is defined in
+the implementation <span class="font-it">x</span><span class="machine"><span class="font-tt">.ml</span></span>.</p></li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.cmo</span></span> are taken to be compiled object bytecode. These
 files are linked together, along with the object files obtained
 by compiling <span class="machine"><span class="font-tt">.ml</span></span> arguments (if any), and the OCaml standard
-library, to produce a native-code executable program. The order in
-which <span class="machine"><span class="font-tt">.cmx</span></span> and <span class="machine"><span class="font-tt">.ml</span></span> arguments are presented on the command line is
+library, to produce a standalone executable program. The order in
+which <span class="machine"><span class="font-tt">.cmo</span></span> and <span class="machine"><span class="font-tt">.ml</span></span> arguments are presented on the command line is
 relevant: compilation units are initialized in that order at
 run-time, and it is a link-time error to use a component of a unit
-before having initialized it. Hence, a given <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmx</span></span> file must come
-before all <span class="machine"><span class="font-tt">.cmx</span></span> files that refer to the unit <span class="font-it">x</span>.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.cmxa</span></span> are taken to be libraries of object code.
-Such a library packs in two files (<span class="font-it">lib</span><span class="machine"><span class="font-tt">.cmxa</span></span> and <span class="font-it">lib</span><span class="machine"><span class="font-tt">.a</span></span>/<span class="machine"><span class="font-tt">.lib</span></span>)
-a set of object files (<span class="machine"><span class="font-tt">.cmx</span></span> and <span class="machine"><span class="font-tt">.o</span></span>/<span class="machine"><span class="font-tt">.obj</span></span> files). Libraries are build with
-<span class="machine"><span class="font-tt">ocamlopt -a</span></span> (see the description of the <span class="machine"><span class="font-tt">-a</span></span> option below). The object
-files contained in the library are linked as regular <span class="machine"><span class="font-tt">.cmx</span></span> files (see
-above), in the order specified when the library was built. The only
-difference is that if an object file contained in a library is not
-referenced anywhere in the program, then it is not linked in.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.c</span></span> are passed to the C compiler, which generates
-a <span class="machine"><span class="font-tt">.o</span></span>/<span class="machine"><span class="font-tt">.obj</span></span> object file. This object file is linked with the program.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.o</span></span>, <span class="machine"><span class="font-tt">.a</span></span> or <span class="machine"><span class="font-tt">.so</span></span> (<span class="machine"><span class="font-tt">.obj</span></span>, <span class="machine"><span class="font-tt">.lib</span></span> and <span class="machine"><span class="font-tt">.dll</span></span>
-under Windows) are assumed to be C object files and
-libraries. They are linked with the program.</li></ul><p>The output of the linking phase is a regular Unix or Windows
-executable file. It does not need <span class="machine"><span class="font-tt">ocamlrun</span></span> to run.</p><p>The compiler is able to emit some information on its internal stages:</p><ul class="itemize"><li class="li-itemize">
-<span class="machine"><span class="font-tt">.cmt</span></span> files for the implementation of the compilation unit
+before having initialized it. Hence, a given <span class="font-it">x</span><span class="machine"><span class="font-tt">.cmo</span></span> file must come
+before all <span class="machine"><span class="font-tt">.cmo</span></span> files that refer to the unit <span class="font-it">x</span>.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.cma</span></span> are taken to be libraries of object bytecode.
+A library of object bytecode packs in a single file a set of object
+bytecode files (<span class="machine"><span class="font-tt">.cmo</span></span> files). Libraries are built with <span class="machine"><span class="font-tt">ocamlc -a</span></span>
+(see the description of the <span class="machine"><span class="font-tt">-a</span></span> option below). The object files
+contained in the library are linked as regular <span class="machine"><span class="font-tt">.cmo</span></span> files (see
+above), in the order specified when the <span class="machine"><span class="font-tt">.cma</span></span> file was built. The
+only difference is that if an object file contained in a library is
+not referenced anywhere in the program, then it is not linked in.</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.c</span></span> are passed to the C compiler, which generates
+a <span class="machine"><span class="font-tt">.o</span></span> object file (<span class="machine"><span class="font-tt">.obj</span></span> under Windows). This object file is linked
+with the program if the <span class="machine"><span class="font-tt">-custom</span></span> flag is set (see the description of
+<span class="machine"><span class="font-tt">-custom</span></span> below).</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.o</span></span> or <span class="machine"><span class="font-tt">.a</span></span> (<span class="machine"><span class="font-tt">.obj</span></span> or <span class="machine"><span class="font-tt">.lib</span></span> under Windows)
+are assumed to be C object files and libraries. They are passed to the
+C linker when linking in <span class="machine"><span class="font-tt">-custom</span></span> mode (see the description of
+<span class="machine"><span class="font-tt">-custom</span></span> below).</li><li class="li-itemize">Arguments ending in <span class="machine"><span class="font-tt">.so</span></span> (<span class="machine"><span class="font-tt">.dll</span></span> under Windows)
+are assumed to be C shared libraries (DLLs). During linking, they are
+searched for external C functions referenced from the OCaml code,
+and their names are written in the generated bytecode executable.
+The run-time system <span class="machine"><span class="font-tt">ocamlrun</span></span> then loads them dynamically at program
+start-up time.</li></ul><p>The output of the linking phase is a file containing compiled bytecode
+that can be executed by the OCaml bytecode interpreter:
+the command named <span class="machine"><span class="font-tt">ocamlrun</span></span>. If <span class="machine"><span class="font-tt">a.out</span></span> is the name of the file
+produced by the linking phase, the command
+</p><pre>        ocamlrun a.out <span class="font-it">arg</span><sub>1</sub> <span class="font-it">arg</span><sub>2</sub> … <span class="font-it">arg</span><sub><span class="font-it">n</span></sub>
+</pre><p>
+executes the compiled code contained in <span class="machine"><span class="font-tt">a.out</span></span>, passing it as
+arguments the character strings <span class="font-it">arg</span><sub>1</sub> to <span class="font-it">arg</span><sub><span class="font-it">n</span></sub>.
+(See chapter ‍<a href="runtime.html#c%3Aruntime">15</a> for more details.)</p><p>On most systems, the file produced by the linking
+phase can be run directly, as in:
+</p><pre>        ./a.out <span class="font-it">arg</span><sub>1</sub> <span class="font-it">arg</span><sub>2</sub> … <span class="font-it">arg</span><sub><span class="font-it">n</span></sub>
+</pre><p>
+The produced file has the executable bit set, and it manages to launch
+the bytecode interpreter by itself.</p><p>The compiler is able to emit some information on its internal stages.
+It can output <span class="machine"><span class="font-tt">.cmt</span></span> files for the implementation of the compilation unit
 and <span class="machine"><span class="font-tt">.cmti</span></span> for signatures if the option <span class="machine"><span class="font-tt">-bin-annot</span></span> is passed to it (see the
 description of <span class="machine"><span class="font-tt">-bin-annot</span></span> below).
 Each such file contains a typed abstract syntax tree (AST), that is produced
 during the type checking procedure. This tree contains all available information
 about the location and the specific type of each term in the source file.
-The AST is partial if type checking was unsuccessful.<p>These <span class="machine"><span class="font-tt">.cmt</span></span> and <span class="machine"><span class="font-tt">.cmti</span></span> files are typically useful for code inspection tools.</p></li><li class="li-itemize"><span class="machine"><span class="font-tt">.cmir-linear</span></span> files for the implementation of the compilation unit
-if the option <span class="machine"><span class="font-tt">-save-ir-after scheduling</span></span> is passed to it.
-Each such file contains a low-level intermediate representation,
-produced by the instruction scheduling pass.<p>An external tool can perform low-level optimisations,
-such as code layout, by transforming a <span class="machine"><span class="font-tt">.cmir-linear</span></span> file.
-To continue compilation, the compiler can be invoked with (a possibly modified)
-<span class="machine"><span class="font-tt">.cmir-linear</span></span> file as an argument, instead of the corresponding source file.
-</p></li></ul>
-<h2 class="section" id="s:native-options"><a class="section-anchor" href="#s:native-options" aria-hidden="true">﻿</a><span class="number">2</span> Options</h2>
-<p>The following command-line options are recognized by <span class="machine"><span class="font-tt">ocamlopt</span></span>.
-The options <span class="machine"><span class="font-tt">-pack</span></span>, <span class="machine"><span class="font-tt">-a</span></span>, <span class="machine"><span class="font-tt">-shared</span></span>, <span class="machine"><span class="font-tt">-c</span></span>, <span class="machine"><span class="font-tt">-output-obj</span></span> and
-<span class="machine"><span class="font-tt">-output-complete-obj</span></span> are mutually exclusive.</p><dl class="description"><dt class="dt-description">
+The AST is partial if type checking was unsuccessful.</p><p>These <span class="machine"><span class="font-tt">.cmt</span></span> and <span class="machine"><span class="font-tt">.cmti</span></span> files are typically useful for code inspection tools.</p>
+<h2 class="section" id="s:comp-options"><a class="section-anchor" href="#s:comp-options" aria-hidden="true">﻿</a><span class="number">2</span> Options</h2>
+<p>The following command-line options are recognized by <span class="machine"><span class="font-tt">ocamlc</span></span>.
+The options <span class="machine"><span class="font-tt">-pack</span></span>, <span class="machine"><span class="font-tt">-a</span></span>, <span class="machine"><span class="font-tt">-c</span></span>, <span class="machine"><span class="font-tt">-output-obj</span></span> and <span class="machine"><span class="font-tt">-output-complete-obj</span></span> are mutually exclusive.
+</p><dl class="description"><dt class="dt-description">
 <span class="font-bold"><span class="machine"><span class="font-tt">-a</span></span></span></dt><dd class="dd-description">
-Build a library(<span class="machine"><span class="font-tt">.cmxa</span></span> and <span class="machine"><span class="font-tt">.a</span></span>/<span class="machine"><span class="font-tt">.lib</span></span> files)
-with the object files (<span class="machine"><span class="font-tt">.cmx</span></span> and <span class="machine"><span class="font-tt">.o</span></span>/<span class="machine"><span class="font-tt">.obj</span></span> files)
+Build a library(<span class="machine"><span class="font-tt">.cma</span></span> file)
+with the object files ( <span class="machine"><span class="font-tt">.cmo</span></span> files)
 given on the command line, instead of linking them into an executable file.
-The name of the library must be set with the <span class="machine"><span class="font-tt">-o</span></span> option.<p>If <span class="machine"><span class="font-tt">-cclib</span></span> or <span class="machine"><span class="font-tt">-ccopt</span></span> options are passed on the command
-line, these options are stored in the resulting <span class="machine"><span class="font-tt">.cmxa</span></span>library. Then,
-linking with this library automatically adds back the 
+The name of the library must be set with the <span class="machine"><span class="font-tt">-o</span></span> option.<p>If <span class="machine"><span class="font-tt">-custom</span></span>, <span class="machine"><span class="font-tt">-cclib</span></span> or <span class="machine"><span class="font-tt">-ccopt</span></span> options are passed on the command
+line, these options are stored in the resulting <span class="machine"><span class="font-tt">.cma</span></span>library. Then,
+linking with this library automatically adds back the <span class="machine"><span class="font-tt">-custom</span></span>, 
 <span class="machine"><span class="font-tt">-cclib</span></span> and <span class="machine"><span class="font-tt">-ccopt</span></span> options as if they had been provided on the
 command line, unless the <span class="machine"><span class="font-tt">-noautolink</span></span> option is given.
 </p></dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-absname</span></span></span></dt><dd class="dd-description">
@@ -126,19 +130,19 @@ compilation. Source code files are turned into compiled files, but no
 executable file is produced. This option is useful to
 compile modules separately.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-cc</span></span> <span class="font-it">ccomp</span></span></dt><dd class="dd-description">
-Use <span class="font-it">ccomp</span> as the C linker called to build the final executable 
-
+Use <span class="font-it">ccomp</span> as the C linker 
+when linking in “custom runtime” mode (see the <span class="machine"><span class="font-tt">-custom</span></span> option)
 and as the C compiler for compiling <span class="machine"><span class="font-tt">.c</span></span> source files. When linking object
 files produced by a C++ compiler (such as <span class="machine"><span class="font-tt">g++</span></span> or <span class="machine"><span class="font-tt">clang++</span></span>), it is recommended
 to use <span class="machine"><span class="font-tt">-cc c++</span></span>.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-cclib</span></span> <span class="machine"><span class="font-tt">-l</span></span><span class="font-it">libname</span></span></dt><dd class="dd-description">
-Pass the <span class="machine"><span class="font-tt">-l</span></span><span class="font-it">libname</span> option to the  linker
-.
+Pass the <span class="machine"><span class="font-tt">-l</span></span><span class="font-it">libname</span> option to the C linker
+when linking in “custom runtime” mode (see the <span class="machine"><span class="font-tt">-custom</span></span> option).
 This causes the given C library to be linked with the program.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-ccopt</span></span> <span class="font-it">option</span></span></dt><dd class="dd-description">
 Pass the given option to the C compiler and linker.
-For instance, <span class="machine"><span class="font-tt">-ccopt -L</span></span><span class="font-it">dir</span> causes the C linker to search for C libraries in
-directory <span class="font-it">dir</span>. 
+When linking in “custom runtime” mode, for instance <span class="machine"><span class="font-tt">-ccopt -L</span></span><span class="font-it">dir</span> causes the C linker to search for C libraries in
+directory <span class="font-it">dir</span>. (See the <span class="machine"><span class="font-tt">-custom</span></span> option.)
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-cmi-file</span></span> <span class="font-it">filename</span></span></dt><dd class="dd-description">
 Use the given interface file to type-check the ML source file to compile.
 When this option is not specified, the compiler looks for a <span class="font-it">.mli</span> file
@@ -170,35 +174,65 @@ corresponding to the location of the error.
 </dd></dl>
 The default setting is <span class="machine"><span class="font-tt">contextual</span></span>.<p>The environment variable <span class="machine"><span class="font-tt">OCAML_ERROR_STYLE</span></span> is considered if <span class="machine"><span class="font-tt">-error-style</span></span> is
 not provided. Its values are short/contextual as above.
-</p></dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-compact</span></span></span></dt><dd class="dd-description">
-Optimize the produced code for space rather than for time. This
-results in slightly smaller but slightly slower programs. The default is to
-optimize for speed.
+</p></dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-compat-32</span></span></span></dt><dd class="dd-description">
+Check that the generated bytecode executable can run on 32-bit
+platforms and signal an error if it cannot. This is useful when
+compiling bytecode on a 64-bit machine.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-config</span></span></span></dt><dd class="dd-description">
-Print the version number of <span class="machine"><span class="font-tt">ocamlopt</span></span> and a detailed
+Print the version number of <span class="machine"><span class="font-tt">ocamlc</span></span> and a detailed
 summary of its configuration, then exit.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-config-var</span></span> <span class="font-it">var</span></span></dt><dd class="dd-description">
 Print the value of a specific configuration variable from the
 <span class="machine"><span class="font-tt">-config</span></span> output, then exit. If the variable does not exist, the exit
 code is non-zero. This option is only available since OCaml 4.08,
 so script authors should have a fallback for older versions.
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-custom</span></span></span></dt><dd class="dd-description">
+Link in “custom runtime” mode. In the default linking mode, the
+linker produces bytecode that is intended to be executed with the
+shared runtime system, <span class="machine"><span class="font-tt">ocamlrun</span></span>. In the custom runtime mode, the
+linker produces an output file that contains both the runtime system
+and the bytecode for the program. The resulting file is larger, but it
+can be executed directly, even if the <span class="machine"><span class="font-tt">ocamlrun</span></span> command is not
+installed. Moreover, the “custom runtime” mode enables static
+linking of OCaml code with user-defined C functions, as described in
+chapter ‍<a href="intfc.html#c%3Aintf-c">22</a>.
+<blockquote class="quote"><span class="osvariant">Unix:</span> 
+Never use the <span class="machine"><span class="font-tt">strip</span></span> command on executables produced by <span class="machine"><span class="font-tt">ocamlc -custom</span></span>,
+this would remove the bytecode part of the executable.
+</blockquote>
+<blockquote class="quote"><span class="osvariant">Unix:</span> 
+Security warning: never set the “setuid” or “setgid” bits on executables
+produced by <span class="machine"><span class="font-tt">ocamlc -custom</span></span>, this would make them vulnerable to attacks.
+</blockquote>
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-depend</span></span> <span class="font-it">ocamldep-args</span></span></dt><dd class="dd-description">
 Compute dependencies, as the <span class="machine"><span class="font-tt">ocamldep</span></span> command would do. The remaining
 arguments are interpreted as if they were given to the <span class="machine"><span class="font-tt">ocamldep</span></span> command.
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-dllib</span></span> <span class="machine"><span class="font-tt">-l</span></span><span class="font-it">libname</span></span></dt><dd class="dd-description">
+Arrange for the C shared library <span class="machine"><span class="font-tt">dll</span></span><span class="font-it">libname</span><span class="machine"><span class="font-tt">.so</span></span>
+(<span class="machine"><span class="font-tt">dll</span></span><span class="font-it">libname</span><span class="machine"><span class="font-tt">.dll</span></span> under Windows) to be loaded dynamically
+by the run-time system <span class="machine"><span class="font-tt">ocamlrun</span></span> at program start-up time.
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-dllpath</span></span> <span class="font-it">dir</span></span></dt><dd class="dd-description">
+Adds the directory <span class="font-it">dir</span> to the run-time search path for shared
+C libraries. At link-time, shared libraries are searched in the
+standard search path (the one corresponding to the <span class="machine"><span class="font-tt">-I</span></span> option).
+The <span class="machine"><span class="font-tt">-dllpath</span></span> option simply stores <span class="font-it">dir</span> in the produced
+executable file, where <span class="machine"><span class="font-tt">ocamlrun</span></span> can find it and use it as
+described in section ‍<a href="runtime.html#s%3Aocamlrun-dllpath">15.3</a>.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-for-pack</span></span> <span class="font-it">module-path</span></span></dt><dd class="dd-description">
-Generate an object file (<span class="machine"><span class="font-tt">.cmx</span></span> and <span class="machine"><span class="font-tt">.o</span></span>/<span class="machine"><span class="font-tt">.obj</span></span> files)
+Generate an object file (<span class="machine"><span class="font-tt">.cmo</span></span>)
 that can later be included
 as a sub-module (with the given access path) of a compilation unit
 constructed with <span class="machine"><span class="font-tt">-pack</span></span>. For instance,
-<span class="machine"><span class="font-tt">ocamlopt -for-pack P -c A.ml</span></span>
-will generate <span class="machine"><span class="font-tt">a..cmx</span></span> and <span class="machine"><span class="font-tt">a.o</span></span> files that can
-later be used with <span class="machine"><span class="font-tt">ocamlopt -pack -o P.cmx a.cmx</span></span>.
+<span class="machine"><span class="font-tt">ocamlc -for-pack P -c A.ml</span></span>
+will generate <span class="machine"><span class="font-tt">a..cmo</span></span> that can
+later be used with <span class="machine"><span class="font-tt">ocamlc -pack -o P.cmo a.cmo</span></span>.
 Note: you can still pack a module that was compiled without
 <span class="machine"><span class="font-tt">-for-pack</span></span> but in this case exceptions will be printed with the wrong
 names.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-g</span></span></span></dt><dd class="dd-description">
 Add debugging information while compiling and linking. This option is
-required in order to  produce stack backtraces when
+required in order to be able to debug the program with <span class="machine"><span class="font-tt">ocamldebug</span></span>
+(see chapter ‍<a href="debugger.html#c%3Adebugger">20</a>), and to produce stack backtraces when
 the program terminates on an uncaught exception (see
 section ‍<a href="runtime.html#s%3Aocamlrun-options">15.2</a>).
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-no-g</span></span></span></dt><dd class="dd-description">
@@ -214,9 +248,9 @@ just redirect the standard output of the compiler to a <span class="machine"><sp
 and edit that file to remove all declarations of unexported names.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-I</span></span> <span class="font-it">directory</span></span></dt><dd class="dd-description">
 Add the given directory to the list of directories searched for
-compiled interface files (<span class="machine"><span class="font-tt">.cmi</span></span>), compiled object code files (<span class="machine"><span class="font-tt">.cmx</span></span>),
-and libraries (<span class="machine"><span class="font-tt">.cmxa</span></span>).
 
+compiled interface files (<span class="machine"><span class="font-tt">.cmi</span></span>), compiled object code files <span class="machine"><span class="font-tt">.cmo</span></span>,
+libraries (<span class="machine"><span class="font-tt">.cma</span></span>) and C libraries specified with <span class="machine"><span class="font-tt">-cclib -lxxx</span></span>.
 
 By default, the current directory is searched first, then the standard
 library directory. Directories added with <span class="machine"><span class="font-tt">-I</span></span> are searched after the
@@ -233,15 +267,6 @@ them to silently become direct dependencies.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-impl</span></span> <span class="font-it">filename</span></span></dt><dd class="dd-description">
 Compile the file <span class="font-it">filename</span> as an implementation file, even if its
 extension is not <span class="machine"><span class="font-tt">.ml</span></span>.
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-inline</span></span> <span class="font-it">n</span></span></dt><dd class="dd-description">
-Set aggressiveness of inlining to <span class="font-it">n</span>, where <span class="font-it">n</span> is a positive
-integer. Specifying <span class="machine"><span class="font-tt">-inline 0</span></span> prevents all functions from being
-inlined, except those whose body is smaller than the call site. Thus,
-inlining causes no expansion in code size. The default aggressiveness,
-<span class="machine"><span class="font-tt">-inline 1</span></span>, allows slightly larger functions to be inlined, resulting
-in a slight expansion in code size. Higher values for the <span class="machine"><span class="font-tt">-inline</span></span>
-option cause larger and larger functions to become candidate for
-inlining, but can result in a serious increase in code size.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-intf</span></span> <span class="font-it">filename</span></span></dt><dd class="dd-description">
 Compile the file <span class="font-it">filename</span> as an interface file, even if its
 extension is not <span class="machine"><span class="font-tt">.mli</span></span>.
@@ -258,11 +283,13 @@ subsequent links of programs involving that library to link all the
 modules contained in the library. When compiling a module (option
 <span class="machine"><span class="font-tt">-c</span></span>), setting the <span class="machine"><span class="font-tt">-linkall</span></span> option ensures that this module will
 always be linked if it is put in a library and this library is linked.
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-linscan</span></span></span></dt><dd class="dd-description">
-Use linear scan register allocation. Compiling with this allocator is faster
-than with the usual graph coloring allocator, sometimes quite drastically so for
-long functions and modules. On the other hand, the generated code can be a bit
-slower.
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-make-runtime</span></span></span></dt><dd class="dd-description">
+Build a custom runtime system (in the file specified by option <span class="machine"><span class="font-tt">-o</span></span>)
+incorporating the C object files and libraries given on the command
+line. This custom runtime system can be used later to execute
+bytecode executables produced with the
+<span class="machine"><span class="font-tt">ocamlc -use-runtime</span></span> <span class="font-it">runtime-name</span> option.
+See section ‍<a href="intfc.html#ss%3Acustom-runtime">22.1.6</a> for more information.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-match-context-rows</span></span></span></dt><dd class="dd-description">
 Set the number of rows of context used for optimization during
 pattern matching compilation. The default value is 32. Lower values
@@ -276,35 +303,24 @@ section ‍<a href="modulealias.html#s%3Amodule-alias">12.8</a> for more infor
 Deactivates the applicative behaviour of functors. With this option,
 each functor application generates new types in its result and
 applying the same functor twice to the same argument yields two
-incompatible structures.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-no-float-const-prop</span></span></span></dt><dd class="dd-description">
-Deactivates the constant propagation for floating-point operations.
-This option should be given if the program changes the float rounding
-mode during its execution.
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-noassert</span></span></span></dt><dd class="dd-description">
+incompatible structures.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-noassert</span></span></span></dt><dd class="dd-description">
 Do not compile assertion checks. Note that the special form
 <span class="machine"><span class="font-tt">assert false</span></span> is always compiled because it is typed specially.
 This flag has no effect when linking already-compiled files.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-noautolink</span></span></span></dt><dd class="dd-description">
-When linking <span class="machine"><span class="font-tt">.cmxa</span></span>libraries, ignore  <span class="machine"><span class="font-tt">-cclib</span></span> and <span class="machine"><span class="font-tt">-ccopt</span></span>
+When linking <span class="machine"><span class="font-tt">.cma</span></span>libraries, ignore <span class="machine"><span class="font-tt">-custom</span></span>, <span class="machine"><span class="font-tt">-cclib</span></span> and <span class="machine"><span class="font-tt">-ccopt</span></span>
 options potentially contained in the libraries (if these options were
 given when building the libraries). This can be useful if a library
 contains incorrect specifications of C libraries or C options; in this
 case, during linking, set <span class="machine"><span class="font-tt">-noautolink</span></span> and pass the correct C
 libraries and options on the command line.
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-nodynlink</span></span></span></dt><dd class="dd-description">
-Allow the compiler to use some optimizations that are valid only for
-code that is statically linked to produce a non-relocatable
-executable. The generated code cannot be linked to produce a shared
-library nor a position-independent executable (PIE). Many operating
-systems produce PIEs by default, causing errors when linking code
-compiled with <span class="machine"><span class="font-tt">-nodynlink</span></span>. Either do not use <span class="machine"><span class="font-tt">-nodynlink</span></span> or pass
-the option <span class="machine"><span class="font-tt">-ccopt -no-pie</span></span> at link-time.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-nolabels</span></span></span></dt><dd class="dd-description">
 Ignore non-optional labels in types. Labels cannot be used in
 applications, and parameter order becomes strict.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-nostdlib</span></span></span></dt><dd class="dd-description">
-Do not automatically add the standard library directory to the list of
-directories searched for compiled interface files (<span class="machine"><span class="font-tt">.cmi</span></span>), compiled
-object code files (<span class="machine"><span class="font-tt">.cmx</span></span>), and libraries (<span class="machine"><span class="font-tt">.cmxa</span></span>). See also option
-<span class="machine"><span class="font-tt">-I</span></span>.
+Do not include the standard library directory in the list of
+directories searched for
+compiled interface files (<span class="machine"><span class="font-tt">.cmi</span></span>), compiled object code files
+(<span class="machine"><span class="font-tt">.cmo</span></span>), libraries (<span class="machine"><span class="font-tt">.cma</span></span>), and C libraries specified with
+<span class="machine"><span class="font-tt">-cclib -lxxx</span></span>. See also option <span class="machine"><span class="font-tt">-I</span></span>.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-o</span></span> <span class="font-it">output-file</span></span></dt><dd class="dd-description">
 Specify the name of the output file to produce. For executable files, the
 default output name is <span class="machine"><span class="font-tt">a.out</span></span> under Unix and <span class="machine"><span class="font-tt">camlprog.exe</span></span> under
@@ -312,9 +328,10 @@ Windows. If the <span class="machine"><span class="font-tt">-a</span></span> opt
 produced. If the <span class="machine"><span class="font-tt">-pack</span></span> option is given, specify the name of the
 packed object file produced. If the <span class="machine"><span class="font-tt">-output-obj</span></span> or <span class="machine"><span class="font-tt">-output-complete-obj</span></span>
 options are given, specify the name of the produced object file.
-If the <span class="machine"><span class="font-tt">-shared</span></span> option is given, specify the name of plugin
-file produced.
 
+If the <span class="machine"><span class="font-tt">-c</span></span> option is given, specify the name of the object
+file produced for the <em>next</em> source file that appears on the
+command line.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-opaque</span></span></span></dt><dd class="dd-description">
 When the native compiler compiles an implementation, by default it
 produces a <span class="machine"><span class="font-tt">.cmx</span></span> file containing information for cross-module
@@ -345,38 +362,35 @@ the statements <span class="machine"><span class="font-tt">open!</span></span> <
 were added at the top of each file.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-output-obj</span></span></span></dt><dd class="dd-description">
 Cause the linker to produce a C object file instead of
-an executable file.
+a bytecode executable file.
 This is useful to wrap OCaml code as a C library,
 callable from any C program. See chapter ‍<a href="intfc.html#c%3Aintf-c">22</a>,
 section ‍<a href="intfc.html#ss%3Ac-embedded-code">22.7.5</a>. The name of the output object file
 must be set with the <span class="machine"><span class="font-tt">-o</span></span> option.
-This option can also be used to produce a  compiled shared/dynamic library (<span class="machine"><span class="font-tt">.so</span></span> extension, <span class="machine"><span class="font-tt">.dll</span></span> under Windows).
+This option can also be used to produce a C source file (<span class="machine"><span class="font-tt">.c</span></span> extension)
+or a compiled shared/dynamic library (<span class="machine"><span class="font-tt">.so</span></span> extension, <span class="machine"><span class="font-tt">.dll</span></span> under Windows).
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-output-complete-exe</span></span></span></dt><dd class="dd-description">
+Build a self-contained executable by linking a C object file containing the
+bytecode program, the OCaml runtime system and any other static C code given to
+<span class="machine"><span class="font-tt">ocamlc</span></span>. The resulting effect is similar to <span class="machine"><span class="font-tt">-custom</span></span>, except that the bytecode
+is embedded in the C code so it is no longer accessible to tools such as
+<span class="machine"><span class="font-tt">ocamldebug</span></span>. On the other hand, the resulting binary is resistant to <span class="machine"><span class="font-tt">strip</span></span>.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-output-complete-obj</span></span></span></dt><dd class="dd-description">
 Same as <span class="machine"><span class="font-tt">-output-obj</span></span> options except the object file produced includes the
 runtime and autolink libraries.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-pack</span></span></span></dt><dd class="dd-description">
-Build an object file (<span class="machine"><span class="font-tt">.cmx</span></span> and <span class="machine"><span class="font-tt">.o</span></span>/<span class="machine"><span class="font-tt">.obj</span></span> files) and its associated compiled
-interface (<span class="machine"><span class="font-tt">.cmi</span></span>) that combines the <span class="machine"><span class="font-tt">.cmx</span></span> object
+Build a bytecode object file (<span class="machine"><span class="font-tt">.cmo</span></span> file) and its associated compiled
+interface (<span class="machine"><span class="font-tt">.cmi</span></span>) that combines the object
 files given on the command line, making them appear as sub-modules of
-the output <span class="machine"><span class="font-tt">.cmx</span></span> file. The name of the output <span class="machine"><span class="font-tt">.cmx</span></span> file must be
+the output <span class="machine"><span class="font-tt">.cmo</span></span> file. The name of the output <span class="machine"><span class="font-tt">.cmo</span></span> file must be
 given with the <span class="machine"><span class="font-tt">-o</span></span> option. For instance,
-<pre>        ocamlopt -pack -o P.cmx A.cmx B.cmx C.cmx
-</pre>generates compiled files <span class="machine"><span class="font-tt">P.cmx</span></span>, <span class="machine"><span class="font-tt">P.o</span></span> and <span class="machine"><span class="font-tt">P.cmi</span></span> describing a
-compilation unit having three sub-modules <span class="machine"><span class="font-tt">A</span></span>, <span class="machine"><span class="font-tt">B</span></span> and <span class="machine"><span class="font-tt">C</span></span>,
-corresponding to the contents of the object files <span class="machine"><span class="font-tt">A.cmx</span></span>, <span class="machine"><span class="font-tt">B.cmx</span></span> and
-<span class="machine"><span class="font-tt">C.cmx</span></span>. These contents can be referenced as <span class="machine"><span class="font-tt">P.A</span></span>, <span class="machine"><span class="font-tt">P.B</span></span> and <span class="machine"><span class="font-tt">P.C</span></span>
-in the remainder of the program.<p>The <span class="machine"><span class="font-tt">.cmx</span></span> object files being combined must have been compiled with
-the appropriate <span class="machine"><span class="font-tt">-for-pack</span></span> option. In the example above,
-<span class="machine"><span class="font-tt">A.cmx</span></span>, <span class="machine"><span class="font-tt">B.cmx</span></span> and <span class="machine"><span class="font-tt">C.cmx</span></span> must have been compiled with
-<span class="machine"><span class="font-tt">ocamlopt -for-pack P</span></span>.</p><p>Multiple levels of packing can be achieved by combining <span class="machine"><span class="font-tt">-pack</span></span> with
-<span class="machine"><span class="font-tt">-for-pack</span></span>. Consider the following example:
-</p><pre>        ocamlopt -for-pack P.Q -c A.ml
-        ocamlopt -pack -o Q.cmx -for-pack P A.cmx
-        ocamlopt -for-pack P -c B.ml
-        ocamlopt -pack -o P.cmx Q.cmx B.cmx
-</pre><p>The resulting <span class="machine"><span class="font-tt">P.cmx</span></span> object file has sub-modules <span class="machine"><span class="font-tt">P.Q</span></span>, <span class="machine"><span class="font-tt">P.Q.A</span></span>
-and <span class="machine"><span class="font-tt">P.B</span></span>.
-</p></dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-pp</span></span> <span class="font-it">command</span></span></dt><dd class="dd-description">
+<pre>        ocamlc -pack -o p.cmo a.cmo b.cmo c.cmo
+</pre>generates compiled files <span class="machine"><span class="font-tt">p.cmo</span></span> and <span class="machine"><span class="font-tt">p.cmi</span></span> describing a compilation
+unit having three sub-modules <span class="machine"><span class="font-tt">A</span></span>, <span class="machine"><span class="font-tt">B</span></span> and <span class="machine"><span class="font-tt">C</span></span>, corresponding to the
+contents of the object files <span class="machine"><span class="font-tt">a.cmo</span></span>, <span class="machine"><span class="font-tt">b.cmo</span></span> and <span class="machine"><span class="font-tt">c.cmo</span></span>. These
+contents can be referenced as <span class="machine"><span class="font-tt">P.A</span></span>, <span class="machine"><span class="font-tt">P.B</span></span> and <span class="machine"><span class="font-tt">P.C</span></span> in the remainder
+of the program.
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-pp</span></span> <span class="font-it">command</span></span></dt><dd class="dd-description">
 Cause the compiler to call the given <span class="font-it">command</span> as a preprocessor
 for each source file. The output of <span class="font-it">command</span> is redirected to
 an intermediate file, which is compiled. If there are no compilation
@@ -385,7 +399,7 @@ errors, the intermediate file is deleted afterwards.
 After parsing, pipe the abstract syntax tree through the preprocessor
 <span class="font-it">command</span>. The module <span class="machine"><span class="font-tt">Ast_mapper</span></span>, described in
 chapter ‍<a href="parsing.html#c%3Aparsinglib">30</a>:
-<a href="../webman/api/compilerlibref/Ast_mapper.html"> <span class="font-tt">Ast_mapper</span> </a>
+<a href="../5.2.0/api/compilerlibref/Ast_mapper.html"> <span class="font-tt">Ast_mapper</span> </a>
 ,
 implements the external interface of a preprocessor.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-principal</span></span></span></dt><dd class="dd-description">
 Check information path during type-checking, to make sure that all
@@ -407,9 +421,6 @@ only if the OCaml compiler was configured with option
 <span class="machine"><span class="font-tt">-with-debug-runtime</span></span>. This suffix gives the debug version of the
 runtime, which is useful for debugging pointer problems in low-level
 code such as C stubs.
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-S</span></span></span></dt><dd class="dd-description">
-Keep the assembly code produced during the compilation. The assembly
-code for the source file <span class="font-it">x</span><span class="machine"><span class="font-tt">.ml</span></span> is saved in the file <span class="font-it">x</span><span class="machine"><span class="font-tt">.s</span></span>.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-safe-string</span></span></span></dt><dd class="dd-description">
 Enforce the separation between types <span class="machine"><span class="font-tt">string</span></span> and <span class="machine"><span class="font-tt">bytes</span></span>,
 thereby making strings read-only. This is the default, and enforced
@@ -417,28 +428,7 @@ since OCaml 5.0.</dd><dt class="dt-description"><span class="font-bold"><span cl
 Do not use type information to optimize pattern-matching.
 This allows to detect match failures even if a pattern-matching was
 wrongly assumed to be exhaustive. This only impacts GADT and
-polymorphic variant compilation.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-save-ir-after</span></span> <span class="font-it">pass</span></span></dt><dd class="dd-description">
-Save intermediate representation after the given compilation pass
-to a file.
-The currently supported passes and the corresponding file extensions are:
-<span class="machine"><span class="font-tt">scheduling</span></span> (<span class="machine"><span class="font-tt">.cmir-linear</span></span>).<p>This experimental feature enables external tools to inspect and manipulate
-compiler’s intermediate representation of the program
-using <span class="machine"><span class="font-tt">compiler-libs</span></span> library (see
-chapter ‍<a href="parsing.html#c%3Aparsinglib">30</a> and
-<a href="../webman/api/compilerlibref/Compiler_libs.html"> <span class="font-tt">Compiler_libs</span> </a>
-).
-</p></dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-shared</span></span></span></dt><dd class="dd-description">
-Build a plugin (usually <span class="machine"><span class="font-tt">.cmxs</span></span>) that can be dynamically loaded with
-the <span class="machine"><span class="font-tt">Dynlink</span></span> module. The name of the plugin must be
-set with the <span class="machine"><span class="font-tt">-o</span></span> option. A plugin can include a number of OCaml
-modules and libraries, and extra native objects (<span class="machine"><span class="font-tt">.o</span></span>, <span class="machine"><span class="font-tt">.obj</span></span>, <span class="machine"><span class="font-tt">.a</span></span>,
-<span class="machine"><span class="font-tt">.lib</span></span> files). Building native plugins is only supported for some
-operating system. Under some systems (currently,
-only Linux AMD 64), all the OCaml code linked in a plugin must have
-been compiled without the <span class="machine"><span class="font-tt">-nodynlink</span></span> flag. Some constraints might also
-apply to the way the extra native objects have been compiled (under
-Linux AMD 64, they must contain only position-independent code).
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-short-paths</span></span></span></dt><dd class="dd-description">
+polymorphic variant compilation.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-short-paths</span></span></span></dt><dd class="dd-description">
 When a type is visible under several module-paths, use the shortest
 one when printing the type’s name in inferred interfaces and error and
 warning messages. Identifier names starting with an underscore <span class="machine"><span class="font-tt">_</span></span> or
@@ -446,7 +436,7 @@ containing double underscores <span class="machine"><span class="font-tt">__</sp
 their length.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-stop-after</span></span> <span class="font-it">pass</span></span></dt><dd class="dd-description">
 Stop compilation after the given compilation pass. The currently
 supported passes are:
-<span class="machine"><span class="font-tt">parsing</span></span>, <span class="machine"><span class="font-tt">typing</span></span>, <span class="machine"><span class="font-tt">scheduling</span></span>, <span class="machine"><span class="font-tt">emit</span></span>.
+<span class="machine"><span class="font-tt">parsing</span></span>, <span class="machine"><span class="font-tt">typing</span></span>.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-strict-sequence</span></span></span></dt><dd class="dd-description">
 Force the left-hand part of each sequence to have type unit.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-strict-formats</span></span></span></dt><dd class="dd-description">
 Reject invalid formats that were accepted in legacy format
@@ -461,7 +451,7 @@ When a type is unboxable it will be boxed unless annotated with
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-unsafe</span></span></span></dt><dd class="dd-description">
 Turn bound checking off for array and string accesses (the <span class="machine"><span class="font-tt">v.(i)</span></span> and
 <span class="machine"><span class="font-tt">s.[i]</span></span> constructs). Programs compiled with <span class="machine"><span class="font-tt">-unsafe</span></span> are therefore
- faster, but unsafe: anything can happen if the program
+slightly faster, but unsafe: anything can happen if the program
 accesses an array or string outside of its bounds.
 Additionally, turn off the check for zero divisor in integer division
 and modulus operations. With <span class="machine"><span class="font-tt">-unsafe</span></span>, an integer division
@@ -471,12 +461,17 @@ unspecified result instead of raising a <span class="machine"><span class="font-
 Identify the types <span class="machine"><span class="font-tt">string</span></span> and <span class="machine"><span class="font-tt">bytes</span></span>, thereby making strings writable.
 This is intended for compatibility with old source code and should not
 be used with new software. This option raises an error unconditionally
-since OCaml 5.0.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-v</span></span></span></dt><dd class="dd-description">
+since OCaml 5.0.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-use-runtime</span></span> <span class="font-it">runtime-name</span></span></dt><dd class="dd-description">
+Generate a bytecode executable file that can be executed on the custom
+runtime system <span class="font-it">runtime-name</span>, built earlier with
+<span class="machine"><span class="font-tt">ocamlc -make-runtime</span></span> <span class="font-it">runtime-name</span>.
+See section ‍<a href="intfc.html#ss%3Acustom-runtime">22.1.6</a> for more information.
+</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-v</span></span></span></dt><dd class="dd-description">
 Print the version number of the compiler and the location of the
 standard library directory, then exit.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-verbose</span></span></span></dt><dd class="dd-description">
 Print all external commands before they are executed,
-in particular invocations of the assembler, C compiler, and linker.
 
+in particular invocations of the C compiler and linker in <span class="machine"><span class="font-tt">-custom</span></span> mode.
 Useful to debug C library problems.</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-version</span></span> or <span class="machine"><span class="font-tt">-vnum</span></span></span></dt><dd class="dd-description">
 Print the version number of the compiler in short form (e.g. <span class="machine"><span class="font-tt">3.11.0</span></span>),
 then exit.
@@ -580,12 +575,12 @@ mutually recursive types.
 </dd><dt class="dt-description"><span class="font-bold">49 <span class="machine"><span class="font-tt">no-cmi-file</span></span></span></dt><dd class="dd-description"> Absent cmi file when looking up module alias. (since 4.02)
 </dd><dt class="dt-description"><span class="font-bold">50 <span class="machine"><span class="font-tt">unexpected-docstring</span></span></span></dt><dd class="dd-description"> Unexpected documentation comment. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">51 <span class="machine"><span class="font-tt">wrong-tailcall-expectation</span></span></span></dt><dd class="dd-description"> Function call annotated with an incorrect @tailcall attribute. (since 4.03)
-</dd><dt class="dt-description"><span class="font-bold">52 <span class="machine"><span class="font-tt">fragile-literal-pattern</span></span> (see </span><a href="comp.html#ss%3Awarn52"><span class="font-bold">13.5.3</span></a><span class="font-bold">)</span></dt><dd class="dd-description"> Fragile constant pattern. (since 4.03)
+</dd><dt class="dt-description"><span class="font-bold">52 <span class="machine"><span class="font-tt">fragile-literal-pattern</span></span> (see </span><a href="#ss%3Awarn52"><span class="font-bold">13.5.3</span></a><span class="font-bold">)</span></dt><dd class="dd-description"> Fragile constant pattern. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">53 <span class="machine"><span class="font-tt">misplaced-attribute</span></span></span></dt><dd class="dd-description"> Attribute cannot appear in this context. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">54 <span class="machine"><span class="font-tt">duplicated-attribute</span></span></span></dt><dd class="dd-description"> Attribute used more than once on an expression. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">55 <span class="machine"><span class="font-tt">inlining-impossible</span></span></span></dt><dd class="dd-description"> Inlining impossible. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">56 <span class="machine"><span class="font-tt">unreachable-case</span></span></span></dt><dd class="dd-description"> Unreachable case in a pattern-matching (based on type information). (since 4.03)
-</dd><dt class="dt-description"><span class="font-bold">57 <span class="machine"><span class="font-tt">ambiguous-var-in-pattern-guard</span></span> (see </span><a href="comp.html#ss%3Awarn57"><span class="font-bold">13.5.4</span></a><span class="font-bold">)</span></dt><dd class="dd-description"> Ambiguous or-pattern variables under guard. (since 4.03)
+</dd><dt class="dt-description"><span class="font-bold">57 <span class="machine"><span class="font-tt">ambiguous-var-in-pattern-guard</span></span> (see </span><a href="#ss%3Awarn57"><span class="font-bold">13.5.4</span></a><span class="font-bold">)</span></dt><dd class="dd-description"> Ambiguous or-pattern variables under guard. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">58 <span class="machine"><span class="font-tt">no-cmx-file</span></span></span></dt><dd class="dd-description"> Missing cmx file. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">59 <span class="machine"><span class="font-tt">flambda-assignment-to-non-mutable-value</span></span></span></dt><dd class="dd-description"> Assignment to non-mutable value. (since 4.03)
 </dd><dt class="dt-description"><span class="font-bold">60 <span class="machine"><span class="font-tt">unused-module</span></span></span></dt><dd class="dd-description"> Unused module declaration. (since 4.04)
@@ -621,7 +616,7 @@ arguments from being uncurried. (since 4.12)
 </dd><dt class="dt-description"><span class="font-bold">Z</span></dt><dd class="dd-description"> Alias for warning 27.
 
 </dd></dl><p>The default setting is <span class="machine"><span class="font-tt">-w +a-4-6-7-9-27-29-32..42-44-45-48-50-60</span></span>.
-It is displayed by <span class="machine"><span class="font-tt">ocamlopt -help</span></span>.
+It is displayed by <span class="machine"><span class="font-tt">ocamlc -help</span></span>.
 Note that warnings 5 and 10 are not always triggered, depending on
 the internals of the type checker.</p></dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-warn-error</span></span> <span class="font-it">warning-list</span></span></dt><dd class="dd-description">
 Mark as fatal the warnings specified in the argument <span class="font-it">warning-list</span>.
@@ -647,16 +642,8 @@ Process <span class="font-it">file</span> as a file name, even if it starts with
 character.
 </dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-help</span></span> or <span class="machine"><span class="font-tt">--help</span></span></span></dt><dd class="dd-description">
 Display a short usage summary and exit.</dd></dl>
-<h5 class="paragraph" id="sec367"><a class="section-anchor" href="#sec367" aria-hidden="true">﻿</a>Options for the 64-bit x86 architecture</h5>
-<p>
-The 64-bit code generator for Intel/AMD x86 processors (<span class="machine"><span class="font-tt">amd64</span></span>
-architecture) supports the following additional options:</p><dl class="description"><dt class="dt-description">
-<span class="font-bold"><span class="machine"><span class="font-tt">-fPIC</span></span></span></dt><dd class="dd-description"> Generate position-independent machine code. This is
-the default.
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">-fno-PIC</span></span></span></dt><dd class="dd-description"> Generate position-dependent machine code.
-</dd></dl>
-<h5 class="paragraph" id="sec368"><a class="section-anchor" href="#sec368" aria-hidden="true">﻿</a>Contextual control of command-line options</h5>
-<p>The compiler command line can be modified “from the outside”
+<h5 class="paragraph" id="sec343"><a class="section-anchor" href="#sec343" aria-hidden="true">﻿</a>contextual-cli-control</h5>
+<p>Contextual control of command-line options</p><p>The compiler command line can be modified “from the outside”
 with the following mechanisms. These are experimental
 and subject to change. They should be used only for experimental and
 development work, not in released packages.</p><dl class="description"><dt class="dt-description">
@@ -672,57 +659,316 @@ first character of the string, within the set <span class="machine"><span class=
 A mapping of file names to lists of arguments that
 will be added to the command line (and <span class="machine"><span class="font-tt">OCAMLPARAM</span></span>) arguments.
 </dd></dl>
-<h2 class="section" id="s:native-common-errors"><a class="section-anchor" href="#s:native-common-errors" aria-hidden="true">﻿</a><span class="number">3</span> Common errors</h2>
-<p>The error messages are almost identical to those of <span class="machine"><span class="font-tt">ocamlc</span></span>.
-See section ‍<a href="comp.html#s%3Acomp-errors">13.4</a>.</p>
-<h2 class="section" id="s:native:running-executable"><a class="section-anchor" href="#s:native:running-executable" aria-hidden="true">﻿</a><span class="number">4</span> Running executables produced by ocamlopt</h2>
-<p>Executables generated by <span class="machine"><span class="font-tt">ocamlopt</span></span> are native, stand-alone executable
-files that can be invoked directly. They do
-not depend on the <span class="machine"><span class="font-tt">ocamlrun</span></span> bytecode runtime system nor on
-dynamically-loaded C/OCaml stub libraries.</p><p>During execution of an <span class="machine"><span class="font-tt">ocamlopt</span></span>-generated executable,
-the following environment variables are also consulted:
-</p><dl class="description"><dt class="dt-description">
-<span class="font-bold"><span class="machine"><span class="font-tt">OCAMLRUNPARAM</span></span></span></dt><dd class="dd-description"> Same usage as in <span class="machine"><span class="font-tt">ocamlrun</span></span>
-(see section ‍<a href="runtime.html#s%3Aocamlrun-options">15.2</a>), except that option <span class="machine"><span class="font-tt">l</span></span>
-is ignored (the operating system’s stack size limit
-is used instead).
-</dd><dt class="dt-description"><span class="font-bold"><span class="machine"><span class="font-tt">CAMLRUNPARAM</span></span></span></dt><dd class="dd-description"> If <span class="machine"><span class="font-tt">OCAMLRUNPARAM</span></span> is not found in the
-environment, then <span class="machine"><span class="font-tt">CAMLRUNPARAM</span></span> will be used instead. If
-<span class="machine"><span class="font-tt">CAMLRUNPARAM</span></span> is not found, then the default values will be used.
-</dd></dl>
-<h2 class="section" id="s:compat-native-bytecode"><a class="section-anchor" href="#s:compat-native-bytecode" aria-hidden="true">﻿</a><span class="number">5</span> Compatibility with the bytecode compiler</h2>
-<p>This section lists the known incompatibilities between the bytecode
-compiler and the native-code compiler. Except on those points, the two
-compilers should generate code that behave identically.</p><ul class="itemize"><li class="li-itemize">Signals are detected only when the program performs an
-allocation in the heap. That is, if a signal is delivered while in a
-piece of code that does not allocate, its handler will not be called
-until the next heap allocation.</li><li class="li-itemize">On ARM and PowerPC processors (32 and 64 bits), fused
-multiply-add (FMA) instructions can be generated for a
-floating-point multiplication followed by a floating-point addition
-or subtraction, as in <span class="machine"><span class="font-tt">x *. y +. z</span></span>. The FMA instruction avoids
-rounding the intermediate result <span class="machine"><span class="font-tt">x *. y</span></span>, which is generally
-beneficial, but produces floating-point results that differ slightly
-from those produced by the bytecode interpreter.</li><li class="li-itemize">The native-code compiler performs a number of optimizations that
-the bytecode compiler does not perform, especially when the Flambda
-optimizer is active. In particular, the native-code compiler
-identifies and eliminates “dead code”, i.e. computations that do
-not contribute to the results of the program. For example,
-<pre>        let _ = ignore M.f
-</pre>contains a reference to compilation unit <span class="machine"><span class="font-tt">M</span></span> when compiled to
-bytecode. This reference forces <span class="machine"><span class="font-tt">M</span></span> to be linked and its
-initialization code to be executed. The native-code compiler
-eliminates the reference to <span class="machine"><span class="font-tt">M</span></span>, hence the compilation unit <span class="machine"><span class="font-tt">M</span></span> may
-not be linked and executed. A workaround is to compile <span class="machine"><span class="font-tt">M</span></span> with the
-<span class="machine"><span class="font-tt">-linkall</span></span> flag so that it will always be linked and executed, even if
-not referenced. See also the <span class="machine"><span class="font-tt">Sys.opaque_identity</span></span> function from the
-<span class="machine"><span class="font-tt">Sys</span></span> standard library module.</li><li class="li-itemize">Before 4.10, stack overflows, typically caused by excessively
-deep recursion, are not always turned into a <span class="machine"><span class="font-tt">Stack_overflow</span></span>
-exception like with the bytecode compiler. The runtime system makes
-a best effort to trap stack overflows and raise the <span class="machine"><span class="font-tt">Stack_overflow</span></span>
-exception, but sometimes it fails and a “segmentation fault” or
-another system fault occurs instead.</li></ul>
+<h2 class="section" id="s:modules-file-system"><a class="section-anchor" href="#s:modules-file-system" aria-hidden="true">﻿</a><span class="number">3</span> Modules and the file system</h2>
+<p>This short section is intended to clarify the relationship between the
+names of the modules corresponding to compilation units and the names
+of the files that contain their compiled interface and compiled
+implementation.</p><p>The compiler always derives the module name by taking the capitalized
+base name of the source file (<span class="machine"><span class="font-tt">.ml</span></span> or <span class="machine"><span class="font-tt">.mli</span></span> file). That is, it
+strips the leading directory name, if any, as well as the <span class="machine"><span class="font-tt">.ml</span></span> or
+<span class="machine"><span class="font-tt">.mli</span></span> suffix; then, it set the first letter to uppercase, in order to
+comply with the requirement that module names must be capitalized.
+For instance, compiling the file <span class="machine"><span class="font-tt">mylib/misc.ml</span></span> provides an
+implementation for the module named <span class="machine"><span class="font-tt">Misc</span></span>. Other compilation units
+may refer to components defined in <span class="machine"><span class="font-tt">mylib/misc.ml</span></span> under the names
+<span class="machine"><span class="font-tt">Misc.</span></span><span class="font-it">name</span>; they can also do <span class="machine"><span class="font-tt">open Misc</span></span>, then use unqualified
+names <span class="font-it">name</span>.</p><p>The <span class="machine"><span class="font-tt">.cmi</span></span> and <span class="machine"><span class="font-tt">.cmo</span></span> files produced by the compiler have the same
+base name as the source file. Hence, the compiled files always have
+their base name equal (modulo capitalization of the first letter) to
+the name of the module they describe (for <span class="machine"><span class="font-tt">.cmi</span></span> files) or implement
+(for <span class="machine"><span class="font-tt">.cmo</span></span> files).</p><p>When the compiler encounters a reference to a free module identifier
+<span class="machine"><span class="font-tt">Mod</span></span>, it looks in the search path for a file named <span class="machine"><span class="font-tt">Mod.cmi</span></span> or <span class="machine"><span class="font-tt">mod.cmi</span></span>
+and loads the compiled interface
+contained in that file. As a consequence, renaming <span class="machine"><span class="font-tt">.cmi</span></span> files is not
+advised: the name of a <span class="machine"><span class="font-tt">.cmi</span></span> file must always correspond to the name
+of the compilation unit it implements. It is admissible to move them
+to another directory, if their base name is preserved, and the correct
+<span class="machine"><span class="font-tt">-I</span></span> options are given to the compiler. The compiler will flag an
+error if it loads a <span class="machine"><span class="font-tt">.cmi</span></span> file that has been renamed.</p><p>Compiled bytecode files (<span class="machine"><span class="font-tt">.cmo</span></span> files), on the other hand, can be
+freely renamed once created. That’s because the linker never attempts
+to find by itself the <span class="machine"><span class="font-tt">.cmo</span></span> file that implements a module with a
+given name: it relies instead on the user providing the list of <span class="machine"><span class="font-tt">.cmo</span></span>
+files by hand.</p>
+<h2 class="section" id="s:comp-errors"><a class="section-anchor" href="#s:comp-errors" aria-hidden="true">﻿</a><span class="number">4</span> Common errors</h2>
+<p>This section describes and explains the most frequently encountered
+error messages.</p><dl class="description"><dt class="dt-description"><span class="font-bold">Cannot find file <span class="font-it">filename</span></span></dt><dd class="dd-description">
+The named file could not be found in the current directory, nor in the
+directories of the search path. The <span class="font-it">filename</span> is either a
+compiled interface file (<span class="machine"><span class="font-tt">.cmi</span></span> file), or a compiled bytecode file
+(<span class="machine"><span class="font-tt">.cmo</span></span> file). If <span class="font-it">filename</span> has the format <span class="font-it">mod</span><span class="machine"><span class="font-tt">.cmi</span></span>, this
+means you are trying to compile a file that references identifiers
+from module <span class="font-it">mod</span>, but you have not yet compiled an interface for
+module <span class="font-it">mod</span>. Fix: compile <span class="font-it">mod</span><span class="machine"><span class="font-tt">.mli</span></span> or <span class="font-it">mod</span><span class="machine"><span class="font-tt">.ml</span></span>
+first, to create the compiled interface <span class="font-it">mod</span><span class="machine"><span class="font-tt">.cmi</span></span>.<p>If <span class="font-it">filename</span> has the format <span class="font-it">mod</span><span class="machine"><span class="font-tt">.cmo</span></span>, this
+means you are trying to link a bytecode object file that does not
+exist yet. Fix: compile <span class="font-it">mod</span><span class="machine"><span class="font-tt">.ml</span></span> first.</p><p>If your program spans several directories, this error can also appear
+because you haven’t specified the directories to look into. Fix: add
+the correct <span class="machine"><span class="font-tt">-I</span></span> options to the command line.</p></dd><dt class="dt-description"><span class="font-bold">Corrupted compiled interface <span class="font-it">filename</span></span></dt><dd class="dd-description">
+The compiler produces this error when it tries to read a compiled
+interface file (<span class="machine"><span class="font-tt">.cmi</span></span> file) that has the wrong structure. This means
+something went wrong when this <span class="machine"><span class="font-tt">.cmi</span></span> file was written: the disk was
+full, the compiler was interrupted in the middle of the file creation,
+and so on. This error can also appear if a <span class="machine"><span class="font-tt">.cmi</span></span> file is modified after
+its creation by the compiler. Fix: remove the corrupted <span class="machine"><span class="font-tt">.cmi</span></span> file,
+and rebuild it.</dd><dt class="dt-description"><span class="font-bold">This expression has type </span><span class="font-it">t</span><sub>1</sub><span class="font-bold">, but is used with type </span><span class="font-it">t</span><sub>2</sub></dt><dd class="dd-description">
+This is by far the most common type error in programs. Type <span class="font-it">t</span><sub>1</sub> is
+the type inferred for the expression (the part of the program that is
+displayed in the error message), by looking at the expression itself.
+Type <span class="font-it">t</span><sub>2</sub> is the type expected by the context of the expression; it
+is deduced by looking at how the value of this expression is used in
+the rest of the program. If the two types <span class="font-it">t</span><sub>1</sub> and <span class="font-it">t</span><sub>2</sub> are not
+compatible, then the error above is produced.<p>In some cases, it is hard to understand why the two types <span class="font-it">t</span><sub>1</sub> and
+<span class="font-it">t</span><sub>2</sub> are incompatible. For instance, the compiler can report that
+“expression of type <span class="machine"><span class="font-tt">foo</span></span> cannot be used with type <span class="machine"><span class="font-tt">foo</span></span>”, and it
+really seems that the two types <span class="machine"><span class="font-tt">foo</span></span> are compatible. This is not
+always true. Two type constructors can have the same name, but
+actually represent different types. This can happen if a type
+constructor is redefined. Example:
+</p><pre>        type foo = A | B
+        let f = function A -&gt; 0 | B -&gt; 1
+        type foo = C | D
+        f C
+</pre><p>This result in the error message “expression <span class="machine"><span class="font-tt">C</span></span> of type <span class="machine"><span class="font-tt">foo</span></span> cannot
+be used with type <span class="machine"><span class="font-tt">foo</span></span>”.</p></dd><dt class="dt-description"><span class="font-bold">The type of this expression, <span class="font-it">t</span>, contains type variables
+that cannot be generalized</span></dt><dd class="dd-description">
+Type variables (<span class="machine"><span class="font-tt">'a</span></span>, <span class="machine"><span class="font-tt">'b</span></span>, …) in a type <span class="font-it">t</span> can be in either
+of two states: generalized (which means that the type <span class="font-it">t</span> is valid
+for all possible instantiations of the variables) and not generalized
+(which means that the type <span class="font-it">t</span> is valid only for one instantiation
+of the variables). In a <span class="machine"><span class="font-tt">let</span></span> binding <span class="machine"><span class="font-tt">let </span></span><span class="font-it">name</span><span class="machine"><span class="font-tt"> = </span></span><span class="font-it">expr</span>,
+the type-checker normally generalizes as many type variables as
+possible in the type of <span class="font-it">expr</span>. However, this leads to unsoundness
+(a well-typed program can crash) in conjunction with polymorphic
+mutable data structures. To avoid this, generalization is performed at
+<span class="machine"><span class="font-tt">let</span></span> bindings only if the bound expression <span class="font-it">expr</span> belongs to the
+class of “syntactic values”, which includes constants, identifiers,
+functions, tuples of syntactic values, etc. In all other cases (for
+instance, <span class="font-it">expr</span> is a function application), a polymorphic mutable
+could have been created and generalization is therefore turned off for
+all variables occurring in contravariant or non-variant branches of the
+type. For instance, if the type of a non-value is <span class="machine"><span class="font-tt">'a list</span></span> the
+variable is generalizable (<span class="machine"><span class="font-tt">list</span></span> is a covariant type constructor),
+but not in <span class="machine"><span class="font-tt">'a list -&gt; 'a list</span></span> (the left branch of <span class="machine"><span class="font-tt">-&gt;</span></span> is
+contravariant) or <span class="machine"><span class="font-tt">'a ref</span></span> (<span class="machine"><span class="font-tt">ref</span></span> is non-variant).<p>Non-generalized type variables in a type cause no difficulties inside
+a given structure or compilation unit (the contents of a <span class="machine"><span class="font-tt">.ml</span></span> file,
+or an interactive session), but they cannot be allowed inside
+signatures nor in compiled interfaces (<span class="machine"><span class="font-tt">.cmi</span></span> file), because they
+could be used inconsistently later. Therefore, the compiler
+flags an error when a structure or compilation unit defines a value
+<span class="font-it">name</span> whose type contains non-generalized type variables. There
+are two ways to fix this error:
+</p><ul class="itemize"><li class="li-itemize">
+Add a type constraint or a <span class="machine"><span class="font-tt">.mli</span></span> file to give a monomorphic
+type (without type variables) to <span class="font-it">name</span>. For instance, instead of
+writing
+<pre>    let sort_int_list = List.sort Stdlib.compare
+    (* inferred type 'a list -&gt; 'a list, with 'a not generalized *)
+</pre>write
+<pre>    let sort_int_list = (List.sort Stdlib.compare : int list -&gt; int list);;
+</pre></li><li class="li-itemize">If you really need <span class="font-it">name</span> to have a polymorphic type, turn
+its defining expression into a function by adding an extra parameter.
+For instance, instead of writing
+<pre>    let map_length = List.map Array.length
+    (* inferred type 'a array list -&gt; int list, with 'a not generalized *)
+</pre>write
+<pre>    let map_length lv = List.map Array.length lv
+</pre></li></ul></dd><dt class="dt-description"><span class="font-bold">Reference to undefined global <span class="font-it">mod</span></span></dt><dd class="dd-description">
+This error appears when trying to link an incomplete or incorrectly
+ordered set of files. Either you have forgotten to provide an
+implementation for the compilation unit named <span class="font-it">mod</span> on the command line
+(typically, the file named <span class="font-it">mod</span><span class="machine"><span class="font-tt">.cmo</span></span>, or a library containing
+that file). Fix: add the missing <span class="machine"><span class="font-tt">.ml</span></span> or <span class="machine"><span class="font-tt">.cmo</span></span> file to the command
+line. Or, you have provided an implementation for the module named
+<span class="font-it">mod</span>, but it comes too late on the command line: the
+implementation of <span class="font-it">mod</span> must come before all bytecode object files
+that reference <span class="font-it">mod</span>. Fix: change the order of <span class="machine"><span class="font-tt">.ml</span></span> and <span class="machine"><span class="font-tt">.cmo</span></span>
+files on the command line.<p>Of course, you will always encounter this error if you have mutually
+recursive functions across modules. That is, function <span class="machine"><span class="font-tt">Mod1.f</span></span> calls
+function <span class="machine"><span class="font-tt">Mod2.g</span></span>, and function <span class="machine"><span class="font-tt">Mod2.g</span></span> calls function <span class="machine"><span class="font-tt">Mod1.f</span></span>.
+In this case, no matter what permutations you perform on the command
+line, the program will be rejected at link-time. Fixes:
+</p><ul class="itemize"><li class="li-itemize">
+Put <span class="machine"><span class="font-tt">f</span></span> and <span class="machine"><span class="font-tt">g</span></span> in the same module.
+</li><li class="li-itemize">Parameterize one function by the other.
+That is, instead of having
+<pre>mod1.ml:    let f x = ... Mod2.g ...
+mod2.ml:    let g y = ... Mod1.f ...
+</pre>define
+<pre>mod1.ml:    let f g x = ... g ...
+mod2.ml:    let rec g y = ... Mod1.f g ...
+</pre>and link <span class="machine"><span class="font-tt">mod1.cmo</span></span> before <span class="machine"><span class="font-tt">mod2.cmo</span></span>.
+</li><li class="li-itemize">Use a reference to hold one of the two functions, as in :
+<pre>mod1.ml:    let forward_g =
+                ref((fun x -&gt; failwith "forward_g") : &lt;type&gt;)
+            let f x = ... !forward_g ...
+mod2.ml:    let g y = ... Mod1.f ...
+            let _ = Mod1.forward_g := g
+</pre></li></ul></dd><dt class="dt-description"><span class="font-bold">The external function <span class="font-it">f</span> is not available</span></dt><dd class="dd-description">
+This error appears when trying to link code that calls external
+functions written in C. As explained in
+chapter ‍<a href="intfc.html#c%3Aintf-c">22</a>, such code must be linked with C libraries that
+implement the required <span class="font-it">f</span> C function. If the C libraries in
+question are not shared libraries (DLLs), the code must be linked in
+“custom runtime” mode. Fix: add the required C libraries to the
+command line, and possibly the <span class="machine"><span class="font-tt">-custom</span></span> option.</dd></dl>
+<h2 class="section" id="s:comp-warnings"><a class="section-anchor" href="#s:comp-warnings" aria-hidden="true">﻿</a><span class="number">5</span> Warning reference</h2>
+<p>This section describes and explains in detail some warnings:</p>
+<h3 class="subsection" id="ss:warn6"><a class="section-anchor" href="#ss:warn6" aria-hidden="true">﻿</a><span class="number">5.1</span> Warning 6: Label omitted in function application</h3>
+<p>OCaml supports <span class="machine"><span class="font-tt">labels-omitted</span></span> full applications: if the function has
+a known arity, all the arguments are unlabeled, and their number
+matches the number of non-optional parameters, then labels are ignored
+and non-optional parameters are matched in their definition
+order. Optional arguments are defaulted.</p><pre>let f ~x ~y = x + y
+let test = f 2 3
+
+&gt; let test = f 2 3
+&gt;            ^
+&gt; Warning 6 [labels-omitted]: labels x, y were omitted in the application of this function.
+</pre><p>
+This support for <span class="machine"><span class="font-tt">labels-omitted</span></span> application was introduced when
+labels were added to OCaml, to ease the progressive introduction of
+labels in a codebase. However, it has the downside of weakening the
+labeling discipline: if you use labels to prevent callers from
+mistakenly reordering two parameters of the same type, labels-omitted
+make this mistake possible again.</p><p>Warning 6 warns when labels-omitted applications are used, to
+discourage their use. When labels were introduced, this warning was
+not enabled by default, so users would use labels-omitted
+applications, often without noticing.</p><p>Over time, it has become idiomatic to enable this warning to avoid
+argument-order mistakes. The warning is now on by default, since OCaml
+4.13. Labels-omitted applications are not recommended anymore, but
+users wishing to preserve this transitory style can disable the
+warning explicitly.</p>
+<h3 class="subsection" id="ss:warn9"><a class="section-anchor" href="#ss:warn9" aria-hidden="true">﻿</a><span class="number">5.2</span> Warning 9: missing fields in a record pattern</h3>
+<p>When pattern matching on records, it can be useful to match only few
+fields of a record. Eliding fields can be done either implicitly
+or explicitly by ending the record pattern with <span class="machine"><span class="font-tt">; _</span></span>.
+However, implicit field elision is at odd with pattern matching
+exhaustiveness checks.
+Enabling warning 9 prioritizes exhaustiveness checks over the
+convenience of implicit field elision and will warn on implicit
+field elision in record patterns. In particular, this warning can
+help to spot exhaustive record pattern that may need to be updated
+after the addition of new fields to a record type.</p><pre>type 'a point = {x : 'a; y : 'a}
+let dx { x } = x (* implicit field elision: trigger warning 9 *)
+let dy { y; _ } = y (* explicit field elision: do not trigger warning 9 *)
+</pre>
+<h3 class="subsection" id="ss:warn52"><a class="section-anchor" href="#ss:warn52" aria-hidden="true">﻿</a><span class="number">5.3</span> Warning 52: fragile constant pattern</h3>
+<p>Some constructors, such as the exception constructors <span class="machine"><span class="font-tt">Failure</span></span> and
+<span class="machine"><span class="font-tt">Invalid_argument</span></span>, take as parameter a <span class="machine"><span class="font-tt">string</span></span> value holding
+a text message intended for the user.</p><p>These text messages are usually not stable over time: call sites
+building these constructors may refine the message in a future
+version to make it more explicit, etc. Therefore, it is dangerous to
+match over the precise value of the message. For example, until
+OCaml 4.02, <span class="machine"><span class="font-tt">Array.iter2</span></span> would raise the exception
+</p><pre>  Invalid_argument "arrays must have the same length"
+</pre><p> Since 4.03 it raises the more helpful message
+</p><pre>  Invalid_argument "Array.iter2: arrays must have the same length"
+</pre><p> but this means that any code of the form
+</p><pre>  try ...
+  with Invalid_argument "arrays must have the same length" -&gt; ...
+</pre><p> is now broken and may suffer from uncaught exceptions.</p><p>Warning 52 is there to prevent users from writing such fragile code
+in the first place. It does not occur on every matching on a literal
+string, but only in the case in which library authors expressed
+their intent to possibly change the constructor parameter value in
+the future, by using the attribute <span class="machine"><span class="font-tt">ocaml.warn_on_literal_pattern</span></span>
+(see the manual section on builtin attributes in
+<a href="attributes.html#ss%3Abuiltin-attributes">12.12.1</a>):
+
+</p><div class="caml-example verbatim">
+
+<div class="ocaml">
+
+
+
+<div class="pre caml-input"><span class="ocamlkeyword">type</span> t =
+  | Foo <span class="ocamlkeyword">of</span> string [@ocaml.warn_on_literal_pattern]
+  | Bar <span class="ocamlkeyword">of</span> string
+
+<span class="ocamlkeyword">let</span> no_warning = <span class="ocamlkeyword">function</span>
+  | Bar <span class="ocamlstring">"specific value"</span> -&gt; 0
+  | _ -&gt; 1
+
+<span class="ocamlkeyword">let</span> warning = <span class="ocamlkeyword">function</span>
+  | Foo <span class="ocamlhighlight">"specific value"</span> -&gt; 0
+  | _ -&gt; 1</div>
+
+
+
+<div class="pre caml-output warn"><span class="ocamlwarning">Warning</span> 52 [fragile-literal-pattern]: Code should not depend on the actual values of
+this constructor's arguments. They are only for information
+and may change in future versions. (see manual section 13.5.3)</div></div>
+
+</div><p>In particular, all built-in exceptions with a string argument have
+this attribute set: <span class="machine"><span class="font-tt">Invalid_argument</span></span>, <span class="machine"><span class="font-tt">Failure</span></span>, <span class="machine"><span class="font-tt">Sys_error</span></span> will
+all raise this warning if you match for a specific string argument.</p><p>Additionally, built-in exceptions with a structured argument that
+includes a string also have the attribute set: <span class="machine"><span class="font-tt">Assert_failure</span></span> and
+<span class="machine"><span class="font-tt">Match_failure</span></span> will raise the warning for a pattern that uses a
+literal string to match the first element of their tuple argument.</p><p>If your code raises this warning, you should <em>not</em> change the
+way you test for the specific string to avoid the warning (for
+example using a string equality inside the right-hand-side instead
+of a literal pattern), as your code would remain fragile. You should
+instead enlarge the scope of the pattern by matching on all possible
+values.</p><pre>let warning = function
+  | Foo _ -&gt; 0
+  | _ -&gt; 1
+</pre><p>
+This may require some care: if the scrutinee may return several
+different cases of the same pattern, or raise distinct instances of
+the same exception, you may need to modify your code to separate
+those several cases.</p><p>For example,
+</p><pre>try (int_of_string count_str, bool_of_string choice_str) with
+  | Failure "int_of_string" -&gt; (0, true)
+  | Failure "bool_of_string" -&gt; (-1, false)
+</pre><p> should be rewritten into more atomic tests. For example,
+using the <span class="machine"><span class="font-tt">exception</span></span> patterns documented in Section ‍<a href="patterns.html#sss%3Aexception-match">11.6</a>,
+one can write:
+</p><pre>match int_of_string count_str with
+  | exception (Failure _) -&gt; (0, true)
+  | count -&gt;
+    begin match bool_of_string choice_str with
+    | exception (Failure _) -&gt; (-1, false)
+    | choice -&gt; (count, choice)
+    end
+</pre><p>
+The only case where that transformation is not possible is if a given
+function call may raise distinct exceptions with the same constructor
+but different string values. In this case, you will have to check for
+specific string values. This is dangerous API design and it should be
+discouraged: it’s better to define more precise exception constructors
+than store useful information in strings.</p>
+<h3 class="subsection" id="ss:warn57"><a class="section-anchor" href="#ss:warn57" aria-hidden="true">﻿</a><span class="number">5.4</span> Warning 57: Ambiguous or-pattern variables under guard</h3>
+<p>The semantics of or-patterns in OCaml is specified with
+a left-to-right bias: a value <span class="font-it">v</span> matches the pattern <span class="font-it">p</span> <span class="machine"><span class="font-tt">|</span></span> <span class="font-it">q</span>
+if it matches <span class="font-it">p</span> or <span class="font-it">q</span>, but if it matches both,
+the environment captured by the match is the environment captured by
+<span class="font-it">p</span>, never the one captured by <span class="font-it">q</span>.</p><p>While this property is generally intuitive, there is at least one specific
+case where a different semantics might be expected.
+Consider a pattern followed by a when-guard:
+<span class="machine"><span class="font-tt">|</span></span> ‍<span class="font-it">p</span> ‍<span class="machine"><span class="font-tt">when</span></span> ‍<span class="font-it">g</span> ‍<span class="machine"><span class="font-tt">-&gt;</span></span> ‍<span class="font-it">e</span>, for example:
+</p><pre>     | ((Const x, _) | (_, Const x)) when is_neutral x -&gt; branch
+</pre><p> The semantics is clear:
+match the scrutinee against the pattern, if it matches, test the guard,
+and if the guard passes, take the branch.
+In particular, consider the input <span class="machine"><span class="font-tt">(Const</span></span> ‍<span class="font-it">a</span><span class="machine"><span class="font-tt">, Const</span></span> ‍<span class="font-it">b</span><span class="machine"><span class="font-tt">)</span></span>, where
+<span class="font-it">a</span> fails the test <span class="machine"><span class="font-tt">is_neutral</span></span> ‍<span class="font-it">a</span>, while <span class="font-it">b</span> passes the test
+<span class="machine"><span class="font-tt">is_neutral</span></span> ‍<span class="font-it">b</span>. With the left-to-right semantics, the clause above is
+<em>not</em> taken by its input: matching <span class="machine"><span class="font-tt">(Const</span></span> ‍<span class="font-it">a</span><span class="machine"><span class="font-tt">, Const</span></span> ‍<span class="font-it">b</span><span class="machine"><span class="font-tt">)</span></span>
+against the or-pattern succeeds in the left branch, it returns the
+environment <span class="font-it">x</span> ‍<span class="machine"><span class="font-tt">-&gt;</span></span> ‍<span class="font-it">a</span>, and then the guard
+<span class="machine"><span class="font-tt">is_neutral</span></span> ‍<span class="font-it">a</span> is tested and fails, the branch is not taken.</p><p>However, another semantics may be considered more natural here:
+any pair that has one side passing the test will take the branch. With this
+semantics the previous code fragment would be equivalent to
+</p><pre>     | (Const x, _) when is_neutral x -&gt; branch
+     | (_, Const x) when is_neutral x -&gt; branch
+</pre><p> This is <em>not</em> the semantics adopted by OCaml.</p><p>Warning 57 is dedicated to these confusing cases where the
+specified left-to-right semantics is not equivalent to a non-deterministic
+semantics (any branch can be taken) relatively to a specific guard.
+More precisely, it warns when guard uses “ambiguous” variables, that are bound
+to different parts of the scrutinees by different sides of a or-pattern.
+
+</p>
 <hr>
-<div class="bottom-navigation"><a class="previous" href="runtime.html">« The runtime system (ocamlrun)</a><a class="next" href="lexyacc.html">Lexer and parser generators (ocamllex, ocamlyacc) »</a></div>
+<div class="bottom-navigation"><a class="previous" href="extn.html">« Language extensions</a><a class="next" href="toplevel.html">The toplevel system or REPL (ocaml) »</a></div>
 
 
 
